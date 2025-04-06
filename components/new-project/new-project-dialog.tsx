@@ -57,6 +57,8 @@ export function NewProjectDialog({ buttonVariant = "default", onProjectCreated, 
   const [isCreating, setIsCreating] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [isPrivate, setIsPrivate] = useState(false)
+
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -96,30 +98,103 @@ export function NewProjectDialog({ buttonVariant = "default", onProjectCreated, 
   const handleCreateProject = async () => {
     setIsCreating(true)
 
-    // Simulate project creation
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    // Show success animation
-    setShowSuccess(true)
-
-    // Wait for animation to complete
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    setIsCreating(false)
-    setOpen(false)
-
-    // Call the onProjectCreated callback if provided
-    if (onProjectCreated) {
-      onProjectCreated({
-        title: metadata.title,
+    try {
+      const payload = {
+        name: metadata.title,
         description: metadata.description,
-        file: uploadedFile?.name,
-        thumbnail: metadata.thumbnail?.name,
+        authorId: 1, // Using hardcoded authorId as specified
+        status: "Created",
+        thumbnail: metadata.thumbnail
+          ? URL.createObjectURL(metadata.thumbnail)
+          : "https://www.gravatar.com/avatar/2c7d99fe281ecd3bcd65ab915bac6dd5?s=250",
+        fileName: uploadedFile?.name.split(".")[0] || "untitled",
+        fileType: `.${uploadedFile?.name.split(".").pop()}` || ".mp4",
+      }
+      // Sent request to create new repo
+      const response  = await fetch("http://localhost:4300/api/repo/createRepo",{
+        method : "POST",
+        headers : {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+  
       })
-    }
+      if (!response.ok)
+      {
+        throw new Error(`Failed to create project`)
+        return
+      }
+      const result = await response.json()
+      
+      if (result.success && uploadedFile)
+      {
+        await fetch(result.data.uploadUrl,{
+          method:"PUT",
+          body:uploadedFile,
+          headers: {
+            "Content-Type": uploadedFile.type,
+          }
+        })
+        
+        console.log("File uploaded successfully to S3")
 
-    // Navigate to the new project page
-    router.push("/repo/1")
+        await fetch("http://localhost:4300/api/notification/videoupload", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            event: "VIDEO_UPLOAD_INITIATED",
+            filename: uploadedFile?.name.split(".")[0] || "untitled",
+            filetype: uploadedFile.type,
+          }),
+        });
+      }
+      
+      // Simulate project creation
+      console.log(response)
+      // try {
+      //   const payload = {
+      //     name:metadata.title,
+      //     description: metadata.description,
+      //     authorId :1,
+      //     status : "Created",
+      //     thumbnail: metadata.thumbnail?URL.createObjectURL(metadata.thumbnail):"https://www.gravatar.com/avatar/2c7d99fe281ecd3bcd65ab915bac6dd5?s=250",
+      //     fileName: uploadedFile?name
+  
+   
+      //   }
+      // }
+      // Show success animation
+      setShowSuccess(true)
+  
+      // Wait for animation to complete
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+  
+      setIsCreating(false)
+      setOpen(false)
+  
+      // Call the onProjectCreated callback if provided
+      if (onProjectCreated) {
+        onProjectCreated({
+          // title: metadata.title,
+          // description: metadata.description,
+          // file: uploadedFile?.name,
+          // thumbnail: metadata.thumbnail?.name,
+          ...result.data.repo,
+          file:uploadedFile?.name,
+        })
+      }
+  
+      // Navigate to the new project page
+      // router.push("/repo/1")
+      router.push(`/repo/${result.data.repo.id}`)
+      
+    } catch (error) {
+      console.error("Error creating project:", error)
+      setIsCreating(false)
+      alert(`Failed to create project: ${error}`)
+    }
   }
 
   const canProceed = () => {
