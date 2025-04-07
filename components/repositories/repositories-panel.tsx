@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -19,69 +19,95 @@ import {
   Search,
   SlidersHorizontal,
   Users,
+  Loader2,
+  AlertCircle,
 } from "lucide-react"
 import { NewProjectDialog } from "@/components/new-project/new-project-dialog"
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
+import { fetchRepositories } from "@/lib/redux/repositoriesSlice"
+
+// Helper function to format relative time
+const getRelativeTime = (dateString: string): string => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  if (diffInSeconds < 60) return "just now"
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`
+
+  // Format date for older items
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+  })
+}
+
+// Format creation date
+const formatCreationDate = (dateString: string): string => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+  })
+}
+
+// Calculate storage size based on video count (mock data)
+const calculateStorage = (videos: any[]): string => {
+  const baseSize = 50 // Base size in MB
+  const sizePerVideo = videos.length * 25 // 25MB per video
+  return `${baseSize + sizePerVideo} MB`
+}
 
 interface RepositoriesPanelProps {
   onRepoSelect: (repoId: number) => void
 }
 
 export function RepositoriesPanel({ onRepoSelect }: RepositoriesPanelProps) {
+  const dispatch = useAppDispatch()
+  const { items: repositories, status, error } = useAppSelector((state) => state.repositories)
+
   const [viewMode, setViewMode] = useState<"grid" | "list">("list")
   const [filterActive, setFilterActive] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
 
-  const repositories = [
-    {
-      id: 1,
-      name: "Product Demo v2.0",
-      description: "Updated product demonstration video with new features",
-      lastUpdated: "2 hours ago",
-      commits: 5,
-      branches: 2,
-      thumbnail: "/placeholder.svg?height=120&width=200",
-      status: "Active",
-      creationDate: "Mar 30, 2025 7:50 PM",
-      storage: "118 MB",
-    },
-    {
-      id: 2,
-      name: "Company Overview",
-      description: "Main company overview and mission video",
-      lastUpdated: "1 day ago",
-      commits: 8,
-      branches: 3,
-      thumbnail: "/placeholder.svg?height=120&width=200",
-      status: "Active",
-      creationDate: "Mar 30, 2025 7:49 PM",
-      storage: "124 MB",
-    },
-    {
-      id: 3,
-      name: "Tutorial Series",
-      description: "Video tutorials for onboarding new users",
-      lastUpdated: "3 days ago",
-      commits: 12,
-      branches: 4,
-      thumbnail: "/placeholder.svg?height=120&width=200",
-      status: "Active",
-      creationDate: "Mar 28, 2025 2:30 PM",
-      storage: "156 MB",
-    },
-    {
-      id: 4,
-      name: "Marketing Campaign",
-      description: "Q2 marketing campaign videos",
-      lastUpdated: "5 days ago",
-      commits: 7,
-      branches: 2,
-      thumbnail: "/placeholder.svg?height=120&width=200",
-      status: "Archived",
-      creationDate: "Mar 26, 2025 11:15 AM",
-      storage: "210 MB",
-    },
-  ]
+  // Fetch repositories on component mount
+  useEffect(() => {
+    if (status === "idle") {
+      dispatch(fetchRepositories())
+    }
+  }, [dispatch, status])
 
-  const filteredRepositories = filterActive ? repositories.filter((repo) => repo.status === "Active") : repositories
+  // Filter repositories based on status and search term
+  const filteredRepositories = repositories
+    .filter((repo) => !filterActive || repo.status === "Created") // "Created" is equivalent to "Active" in the API
+    .filter(
+      (repo) =>
+        searchTerm === "" ||
+        repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (repo.description && repo.description.toLowerCase().includes(searchTerm.toLowerCase())),
+    )
+    .map((repo) => ({
+      id: repo.id,
+      name: repo.name,
+      description: repo.description || "No description",
+      lastUpdated: getRelativeTime(repo.updatedAt),
+      commits: repo.branches.reduce((total, branch) => total + branch.commits.length, 0),
+      branches: repo.branches.length,
+      thumbnail: repo.thumbnail || "/placeholder.svg?height=120&width=200",
+      status: repo.status === "Created" ? "Active" : repo.status,
+      creationDate: formatCreationDate(repo.createdAt),
+      storage: calculateStorage(repo.videos),
+    }))
+
+  const isLoading = status === "loading"
 
   return (
     <div className="h-full flex flex-col overflow-auto w-full max-w-none">
@@ -124,7 +150,9 @@ export function RepositoriesPanel({ onRepoSelect }: RepositoriesPanelProps) {
           <div className="flex items-center justify-between w-full">
             <div>
               <h2 className="text-sm font-medium">Manish's Workspace</h2>
-              <p className="text-xs text-muted-foreground mt-0.5 opacity-80">{filteredRepositories.length} Projects</p>
+              <p className="text-xs text-muted-foreground mt-0.5 opacity-80">
+                {isLoading ? "Loading projects..." : `${filteredRepositories.length} Projects`}
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" className="h-6 text-xs gap-1 px-2 border-dashed">
@@ -184,7 +212,12 @@ export function RepositoriesPanel({ onRepoSelect }: RepositoriesPanelProps) {
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Search className="absolute left-2 top-1.5 h-3.5 w-3.5 text-muted-foreground" />
-                <Input placeholder="Search repositories..." className="w-[180px] h-7 text-xs pl-7 pr-2" />
+                <Input
+                  placeholder="Search repositories..."
+                  className="w-[180px] h-7 text-xs pl-7 pr-2"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
               <NewProjectDialog buttonVariant="small" />
             </div>
@@ -192,100 +225,76 @@ export function RepositoriesPanel({ onRepoSelect }: RepositoriesPanelProps) {
 
           <Separator className="w-full" />
 
-          {/* Repositories list */}
-          {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
-              {filteredRepositories.map((repo) => (
-                <div key={repo.id} onClick={() => onRepoSelect(repo.id)} className="cursor-pointer group w-full">
-                  <Card className="overflow-hidden transition-all hover:shadow-md border-muted/40 bg-card/50 hover:bg-card h-full flex flex-col w-full">
-                    <div className="relative aspect-video overflow-hidden w-full">
-                      <img
-                        src={repo.thumbnail || "/placeholder.svg"}
-                        alt={repo.name}
-                        className="object-cover w-full h-full transition-transform group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                      <Badge
-                        variant={repo.status === "Active" ? "default" : "secondary"}
-                        className="absolute top-2 right-2 text-[9px] px-1.5 py-0"
-                      >
-                        {repo.status}
-                      </Badge>
-                    </div>
-                    <div className="p-2.5 flex flex-col flex-1 w-full">
-                      <div>
-                        <h3 className="font-semibold text-sm leading-tight tracking-tight">{repo.name}</h3>
-                        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2 leading-snug">
-                          {repo.description}
-                        </p>
-                      </div>
-                      <div className="mt-auto pt-2 flex items-center justify-between text-[9px] text-muted-foreground w-full">
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-0.5">
-                            <GitCommit className="h-2.5 w-2.5" />
-                            <span>{repo.commits}</span>
-                          </div>
-                          <div className="flex items-center gap-0.5">
-                            <GitBranch className="h-2.5 w-2.5" />
-                            <span>{repo.branches}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-0.5">
-                          <Clock className="h-2.5 w-2.5" />
-                          <span>{repo.lastUpdated}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              ))}
-
-              {/* New project button at the end of the list */}
-              <div className="flex items-center justify-center">
-                <NewProjectDialog buttonVariant="outline-tiny" />
-              </div>
+          {/* Loading state */}
+          {isLoading && (
+            <div className="flex flex-col items-center justify-center py-12 w-full">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">Loading repositories...</p>
             </div>
-          ) : (
-            <div className="w-full rounded-md border border-muted/40 overflow-hidden">
-              {/* Table header for list view */}
-              <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_100px] w-full bg-muted/20 px-3 py-2 border-b border-muted/40">
-                <div className="text-xs font-semibold text-foreground/80">Project</div>
-                <div className="text-xs font-semibold text-foreground/80">Status</div>
-                <div className="text-xs font-semibold text-foreground/80">Last Updated</div>
-                <div className="text-xs font-semibold text-foreground/80">Creation Date</div>
-                <div className="text-xs font-semibold text-foreground/80">Storage</div>
-              </div>
+          )}
 
-              {/* List items */}
-              <div className="w-full">
-                {filteredRepositories.map((repo, index) => (
-                  <div
-                    key={repo.id}
-                    onClick={() => onRepoSelect(repo.id)}
-                    className={`w-full cursor-pointer group hover:bg-muted/10 transition-colors ${index !== filteredRepositories.length - 1 ? "border-b border-muted/30" : ""} ${index % 2 === 0 ? "bg-muted/5" : ""}`}
-                  >
-                    {/* Mobile view (single column) */}
-                    <div className="md:hidden p-3 flex items-start gap-2">
-                      <div className="w-[45px] h-[32px] rounded overflow-hidden flex-shrink-0">
+          {/* Error state */}
+          {error && !isLoading && (
+            <div className="flex flex-col items-center justify-center py-12 w-full">
+              <AlertCircle className="h-8 w-8 text-destructive mb-2" />
+              <p className="text-sm font-medium mb-1">Failed to load repositories</p>
+              <p className="text-xs text-muted-foreground">{error}</p>
+              <Button variant="outline" size="sm" className="mt-4" onClick={() => dispatch(fetchRepositories())}>
+                Try Again
+              </Button>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!isLoading && !error && filteredRepositories.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 w-full">
+              <div className="bg-muted/30 rounded-full p-3 mb-3">
+                <GitBranch className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium mb-1">No repositories found</p>
+              <p className="text-xs text-muted-foreground text-center max-w-sm mb-4">
+                {filterActive
+                  ? "No active repositories found. Try removing the filter or create a new project."
+                  : searchTerm
+                    ? "No repositories match your search. Try a different search term."
+                    : "You don't have any repositories yet. Create your first project to get started."}
+              </p>
+              <NewProjectDialog buttonVariant="outline-small" />
+            </div>
+          )}
+
+          {/* Repositories list */}
+          {!isLoading &&
+            !error &&
+            filteredRepositories.length > 0 &&
+            (viewMode === "grid" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
+                {filteredRepositories.map((repo) => (
+                  <div key={repo.id} onClick={() => onRepoSelect(repo.id)} className="cursor-pointer group w-full">
+                    <Card className="overflow-hidden transition-all hover:shadow-md border-muted/40 bg-card/50 hover:bg-card h-full flex flex-col w-full">
+                      <div className="relative aspect-video overflow-hidden w-full">
                         <img
                           src={repo.thumbnail || "/placeholder.svg"}
                           alt={repo.name}
-                          className="object-cover w-full h-full"
+                          className="object-cover w-full h-full transition-transform group-hover:scale-105"
                         />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                        <Badge
+                          variant={repo.status === "Active" ? "default" : "secondary"}
+                          className="absolute top-2 right-2 text-[9px] px-1.5 py-0"
+                        >
+                          {repo.status}
+                        </Badge>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-semibold text-xs leading-tight text-foreground">{repo.name}</h3>
-                          <Badge
-                            variant={repo.status === "Active" ? "default" : "secondary"}
-                            className="text-[8px] px-1.5 py-0"
-                          >
-                            {repo.status}
-                          </Badge>
+                      <div className="p-2.5 flex flex-col flex-1 w-full">
+                        <div>
+                          <h3 className="font-semibold text-sm leading-tight tracking-tight">{repo.name}</h3>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2 leading-snug">
+                            {repo.description}
+                          </p>
                         </div>
-                        <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-1">{repo.description}</p>
-                        <div className="flex items-center justify-between mt-1">
-                          <div className="flex items-center gap-2 text-[8px] text-muted-foreground">
+                        <div className="mt-auto pt-2 flex items-center justify-between text-[9px] text-muted-foreground w-full">
+                          <div className="flex items-center gap-2">
                             <div className="flex items-center gap-0.5">
                               <GitCommit className="h-2.5 w-2.5" />
                               <span>{repo.commits}</span>
@@ -294,79 +303,146 @@ export function RepositoriesPanel({ onRepoSelect }: RepositoriesPanelProps) {
                               <GitBranch className="h-2.5 w-2.5" />
                               <span>{repo.branches}</span>
                             </div>
-                            <div className="flex items-center gap-0.5">
-                              <Clock className="h-2.5 w-2.5" />
-                              <span>{repo.lastUpdated}</span>
-                            </div>
                           </div>
-                          <span className="text-[8px] text-muted-foreground">{repo.storage}</span>
+                          <div className="flex items-center gap-0.5">
+                            <Clock className="h-2.5 w-2.5" />
+                            <span>{repo.lastUpdated}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </Card>
+                  </div>
+                ))}
 
-                    {/* Desktop view (table layout) */}
-                    <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_100px] w-full py-2.5 px-3 items-center">
-                      <div className="flex items-center gap-3">
-                        <div className="w-[45px] h-[32px] rounded overflow-hidden flex-shrink-0 border border-muted/30">
+                {/* New project button at the end of the list */}
+                <div className="flex items-center justify-center">
+                  <NewProjectDialog buttonVariant="outline-tiny" />
+                </div>
+              </div>
+            ) : (
+              <div className="w-full rounded-md border border-muted/40 overflow-hidden">
+                {/* Table header for list view */}
+                <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_100px] w-full bg-muted/20 px-3 py-2 border-b border-muted/40">
+                  <div className="text-xs font-semibold text-foreground/80">Project</div>
+                  <div className="text-xs font-semibold text-foreground/80">Status</div>
+                  <div className="text-xs font-semibold text-foreground/80">Last Updated</div>
+                  <div className="text-xs font-semibold text-foreground/80">Creation Date</div>
+                  <div className="text-xs font-semibold text-foreground/80">Storage</div>
+                </div>
+
+                {/* List items */}
+                <div className="w-full">
+                  {filteredRepositories.map((repo, index) => (
+                    <div
+                      key={repo.id}
+                      onClick={() => onRepoSelect(repo.id)}
+                      className={`w-full cursor-pointer group hover:bg-muted/10 transition-colors ${index !== filteredRepositories.length - 1 ? "border-b border-muted/30" : ""} ${index % 2 === 0 ? "bg-muted/5" : ""}`}
+                    >
+                      {/* Mobile view (single column) */}
+                      <div className="md:hidden p-3 flex items-start gap-2">
+                        <div className="w-[45px] h-[32px] rounded overflow-hidden flex-shrink-0">
                           <img
                             src={repo.thumbnail || "/placeholder.svg"}
                             alt={repo.name}
                             className="object-cover w-full h-full"
                           />
                         </div>
-                        <div className="min-w-0">
-                          <h3 className="font-semibold text-sm leading-tight tracking-tight text-foreground">
-                            {repo.name}
-                          </h3>
-                          <p className="text-[9px] text-muted-foreground truncate max-w-[200px]">{repo.description}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-xs leading-tight text-foreground">{repo.name}</h3>
+                            <Badge
+                              variant={repo.status === "Active" ? "default" : "secondary"}
+                              className="text-[8px] px-1.5 py-0"
+                            >
+                              {repo.status}
+                            </Badge>
+                          </div>
+                          <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-1">{repo.description}</p>
+                          <div className="flex items-center justify-between mt-1">
+                            <div className="flex items-center gap-2 text-[8px] text-muted-foreground">
+                              <div className="flex items-center gap-0.5">
+                                <GitCommit className="h-2.5 w-2.5" />
+                                <span>{repo.commits}</span>
+                              </div>
+                              <div className="flex items-center gap-0.5">
+                                <GitBranch className="h-2.5 w-2.5" />
+                                <span>{repo.branches}</span>
+                              </div>
+                              <div className="flex items-center gap-0.5">
+                                <Clock className="h-2.5 w-2.5" />
+                                <span>{repo.lastUpdated}</span>
+                              </div>
+                            </div>
+                            <span className="text-[8px] text-muted-foreground">{repo.storage}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center pl-2">
-                        <Badge
-                          variant={repo.status === "Active" ? "default" : "secondary"}
-                          className="text-[9px] px-2 py-0.5 font-medium"
-                        >
-                          {repo.status}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center text-[10px] font-medium text-foreground/80 pl-2">
-                        {repo.lastUpdated}
-                      </div>
-                      <div className="flex items-center text-[10px] text-muted-foreground pl-2">
-                        {repo.creationDate}
-                      </div>
-                      <div className="flex items-center justify-between pl-2">
-                        <span className="text-[10px] font-medium text-foreground/80">{repo.storage}</span>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal className="h-3 w-3" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuItem className="text-[10px]">Edit</DropdownMenuItem>
-                            <DropdownMenuItem className="text-[10px]">Duplicate</DropdownMenuItem>
-                            <DropdownMenuItem className="text-[10px]">Archive</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+
+                      {/* Desktop view (table layout) */}
+                      <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_100px] w-full py-2.5 px-3 items-center">
+                        <div className="flex items-center gap-3">
+                          <div className="w-[45px] h-[32px] rounded overflow-hidden flex-shrink-0 border border-muted/30">
+                            <img
+                              src={repo.thumbnail || "/placeholder.svg"}
+                              alt={repo.name}
+                              className="object-cover w-full h-full"
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-sm leading-tight tracking-tight text-foreground">
+                              {repo.name}
+                            </h3>
+                            <p className="text-[9px] text-muted-foreground truncate max-w-[200px]">
+                              {repo.description}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center pl-2">
+                          <Badge
+                            variant={repo.status === "Active" ? "default" : "secondary"}
+                            className="text-[9px] px-2 py-0.5 font-medium"
+                          >
+                            {repo.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center text-[10px] font-medium text-foreground/80 pl-2">
+                          {repo.lastUpdated}
+                        </div>
+                        <div className="flex items-center text-[10px] text-muted-foreground pl-2">
+                          {repo.creationDate}
+                        </div>
+                        <div className="flex items-center justify-between pl-2">
+                          <span className="text-[10px] font-medium text-foreground/80">{repo.storage}</span>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="h-3 w-3" />
+                                <span className="sr-only">Open menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuItem className="text-[10px]">Edit</DropdownMenuItem>
+                              <DropdownMenuItem className="text-[10px]">Duplicate</DropdownMenuItem>
+                              <DropdownMenuItem className="text-[10px]">Archive</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
 
-                {/* New project button at the end of the list */}
-                <div className="p-3 flex items-center justify-center hover:bg-muted/10 transition-colors w-full border-t border-muted/30">
-                  <NewProjectDialog buttonVariant="outline-small" />
+                  {/* New project button at the end of the list */}
+                  <div className="p-3 flex items-center justify-center hover:bg-muted/10 transition-colors w-full border-t border-muted/30">
+                    <NewProjectDialog buttonVariant="outline-small" />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            ))}
         </div>
       </div>
     </div>
