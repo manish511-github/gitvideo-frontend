@@ -12,6 +12,7 @@ import { ProjectMetadataForm } from "@/components/new-project/project-metadata-f
 import { ProjectTemplates } from "@/components/new-project/project-templates"
 import { CreateProjectButton } from "@/components/new-project/create-project-button"
 import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
 
 interface VideoFile {
   file: File
@@ -27,6 +28,7 @@ export default function NewProjectPage() {
   const [tags, setTags] = useState<string[]>([])
   const [isPrivate, setIsPrivate] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState("")
+  const router = useRouter()
 
   const handleFileUpload = (files: FileList | null) => {
     if (!files) return
@@ -62,8 +64,25 @@ export default function NewProjectPage() {
     }
   }
 
-  const handleCreateProject = () => {
-    // // Here you would typically send the data to your backend
+  const handleCreateProject = async() => {
+    try {
+      const payload = {
+        name: projectName,
+        description: description,
+        authorId: 1, // Using hardcoded authorId as specified
+        status: "Created",
+        thumbnail: "https://www.gravatar.com/avatar/2c7d99fe281ecd3bcd65ab915bac6dd5?s=250", // Default thumbnail
+        fileName: videoFiles.length > 0 ? videoFiles[0].file.name.split(".")[0] : "untitled",
+        fileType: videoFiles.length > 0 ? `.${videoFiles[0].file.name.split(".").pop()}` : ".mp4",
+        tags: tags,
+        isPrivate: isPrivate,
+        template: activeTab === "template" ? selectedTemplate : "blank",
+      }
+
+    } catch (error) {
+      
+    }
+    // Here you would typically send the data to your backend
     // console.log({
     //   projectName,
     //   description,
@@ -76,7 +95,6 @@ export default function NewProjectPage() {
     // // Redirect to the new project page or show success message
     // alert("Project created successfully!")
     // // In a real app, you'd use router.push('/projects/new-project-id')
-    consr 
   }
 
   return (

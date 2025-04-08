@@ -1,9 +1,7 @@
 import type React from "react"
-import "@/styles/globals.css"
-import { Inter } from 'next/font/google'
-import { ThemeProvider } from "@/components/theme/theme-provider"
-
-const inter = Inter({ subsets: ["latin"] })
+import { ThemeProvider } from "@/components/theme-provider"
+import { ReduxProvider } from "@/components/providers/redux-provider"
+import "./globals.css"
 
 export default function RootLayout({
   children,
@@ -12,15 +10,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} overflow-x-hidden`}>
-        <ThemeProvider 
-          attribute="class" 
-          defaultTheme="system" 
-          enableSystem={true}
-          disableTransitionOnChange
-        >
-          <div className="w-full max-w-none bg-background text-foreground">{children}</div>
-        </ThemeProvider>
+      <head />
+      <body>
+        <ReduxProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            {children}
+          </ThemeProvider>
+        </ReduxProvider>
       </body>
     </html>
   )
