@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "@/components/ui/resizable"
 import { VideoEditorModal } from "@/components/video-editor-modal"
@@ -15,7 +15,9 @@ import { OtherPagesContent } from "@/components/navigation/other-pages-content"
 import { RepositoriesPanel } from "@/components/repositories/repositories-panel"
 import { useSearch } from "@/hooks/use-search"
 import { useMetadata } from "@/hooks/use-metadata"
-import { branches, appearanceOptions, sortOptions, defaultMetadataFields, defaultSubActions } from "@/data/sample-data"
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
+import { appearanceOptions, sortOptions, defaultMetadataFields, defaultSubActions } from "@/data/sample-data"
+import { fetchRepositories, setSelectedRepository,setSelectedBranch, Branch } from "@/lib/redux/repositoriesSlice"
 import type { Commit, VideoAsset } from "@/types/repo-types"
 
 interface HomePageProps {
@@ -25,7 +27,9 @@ interface HomePageProps {
 
 export function HomePage({ initialActivePage = "gitvid", initialRepoId = null }: HomePageProps) {
   const router = useRouter()
-
+  const dispatch = useAppDispatch()
+  const {items, status, selectedRepository, selectedBranch } = useAppSelector((state) => state.repositories)
+  
   // State for selected repository
   const [selectedRepoId, setSelectedRepoId] = useState<number | null>(initialRepoId)
 
@@ -35,7 +39,6 @@ export function HomePage({ initialActivePage = "gitvid", initialRepoId = null }:
   const [selectedAsset, setSelectedAsset] = useState<VideoAsset | null>(null)
 
   // State for navigation and UI
-  const [selectedBranch, setSelectedBranch] = useState<string>("main")
   const [showInfoPanel, setShowInfoPanel] = useState(true)
   const [showPreview, setShowPreview] = useState(true)
   const [activePage, setActivePage] = useState<string>(initialActivePage)
@@ -55,14 +58,36 @@ export function HomePage({ initialActivePage = "gitvid", initialRepoId = null }:
   const { metadataFields, setMetadataFields, visibleFields, setVisibleFields, calculateListViewWidth } =
     useMetadata(defaultMetadataFields)
 
-  // Get commits for the current branch (filtered by search if needed)
-  const currentBranchCommits = branches.find((branch) => branch.name === selectedBranch)?.commits || []
+// Fetch repositories when component mounts
+useEffect(() => {
+  if (status == "idle")
+  {
+    dispatch(fetchRepositories())
+  }
+},[dispatch, status])
 
+// Set selected repository when intialRepoId changes or repositories are loaded
+useEffect(() => {
+  if (initialRepoId && status == "succeeded")
+  {
+    dispatch(setSelectedRepository(initialRepoId))
+    setSelectedRepoId(initialRepoId)
+  }
+},[dispatch, initialRepoId, status])
+
+// Get branches and commit for the current repository and branch
+const branches: Branch[] = selectedRepository?.branches || []
+console.log(branches)
+
+
+  const currentBranchCommits = branches.find((branch) => branch.name === selectedBranch)?.commits || []
+  console.log(currentBranchCommits)
   const filteredCommits = currentBranchCommits.filter(
     (commit) =>
-      commit.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      commit.videoAsset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      commit.author.toLowerCase().includes(searchQuery.toLowerCase()),
+      commit.description?.toLowerCase().includes(searchQuery.toLowerCase()) 
+    ||
+      commit.videoAsset?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      commit.author?.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
   // Find the selected branch object
@@ -70,7 +95,7 @@ export function HomePage({ initialActivePage = "gitvid", initialRepoId = null }:
 
   // Event handlers
   const handleBranchSelect = (branchName: string) => {
-    setSelectedBranch(branchName)
+    dispatch(setSelectedBranch(branchName))
     setSelectedAsset(null)
     setSelectedCommit(null)
   }
@@ -119,7 +144,7 @@ export function HomePage({ initialActivePage = "gitvid", initialRepoId = null }:
 
   // Repository selection handler
   const handleRepoSelect = (repoId: number) => {
-    setSelectedRepoId(repoId)
+    dispatch(setSelectedRepository(repoId))
     // Reset other states when changing repositories
     setSelectedCommit(null)
     setSelectedAsset(null)

@@ -27,17 +27,17 @@ export function GridView({ filteredCommits, selectedCommit, handleAssetSelect, e
           >
             {/* Thumbnail section */}
             <div className="relative aspect-video bg-muted/30">
-              <img
+              {/* <img
                 src={commit.videoAsset.thumbnail || "/placeholder.svg?height=180&width=320"}
                 alt={commit.videoAsset.name}
                 className="w-full h-full object-cover"
-              />
+              /> */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
               {/* Duration badge */}
-              <div className="absolute bottom-2 right-2 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded">
+              {/* <div className="absolute bottom-2 right-2 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded">
                 {commit.videoAsset.duration}
-              </div>
+              </div> */}
 
               {/* Edit button (appears on hover) */}
               <Button
@@ -58,7 +58,7 @@ export function GridView({ filteredCommits, selectedCommit, handleAssetSelect, e
             <div className="p-2.5">
               {/* Title and branch badge */}
               <div className="flex items-start justify-between gap-2 mb-1.5">
-                <h3 className="font-medium text-xs line-clamp-1">{commit.videoAsset.name}</h3>
+                {/* <h3 className="font-medium text-xs line-clamp-1">{commit.videoAsset.name}</h3> */}
                 <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">
                   {commit.branch}
                 </Badge>
@@ -72,14 +72,14 @@ export function GridView({ filteredCommits, selectedCommit, handleAssetSelect, e
                 <div className="flex items-center gap-1.5">
                   <Avatar className="h-4 w-4">
                     <AvatarImage src={commit.avatar} alt={commit.author} />
-                    <AvatarFallback>{commit.author[0]}</AvatarFallback>
+                    {/* <AvatarFallback>{commit.author[0]}</AvatarFallback> */}
                   </Avatar>
                   <span className="truncate max-w-[100px]">{commit.author}</span>
                 </div>
 
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <Clock className="h-2.5 w-2.5" />
-                  <span>{commit.date.split(" at")[0]}</span>
+                  {/* <span>{commit.date.split(" at")[0]}</span> */}
                 </div>
               </div>
             </div>

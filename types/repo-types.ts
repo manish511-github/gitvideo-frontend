@@ -15,6 +15,7 @@ export interface VideoAsset {
 
 export interface Commit {
   id: string
+  description: string
   message: string
   author: string
   date: string
