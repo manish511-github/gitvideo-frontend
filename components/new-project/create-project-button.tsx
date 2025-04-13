@@ -2,14 +2,16 @@
 
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
+import { CircularProgress } from "../ui/circular-progress"
 
 interface CreateProjectButtonProps {
   onClick: () => void
   disabled: boolean
   isCreating?: boolean
+  progress?: number
 }
 
-export function CreateProjectButton({ onClick, disabled, isCreating = false }: CreateProjectButtonProps) {
+export function CreateProjectButton({ onClick, disabled, isCreating = false , progress = 0}: CreateProjectButtonProps) {
   return (
     <Button
       onClick={onClick}
@@ -23,7 +25,8 @@ export function CreateProjectButton({ onClick, disabled, isCreating = false }: C
 
       {isCreating && (
         <span className="absolute inset-0 flex items-center justify-center">
-          <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+          <CircularProgress progress={progress} size={24} showPercentage = {false}></CircularProgress>
+          {/* <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> */}
           Creating...
         </span>
       )}

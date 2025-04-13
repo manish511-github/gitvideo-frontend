@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ProjectMetadataForm } from "./project-metadata-form"
@@ -14,6 +15,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { Plus, Upload, ArrowRight, ArrowLeft, FileVideo, X, CheckCircle } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
+import { current } from "@reduxjs/toolkit"
+import { fetchRepositories } from "@/lib/redux/repositoriesSlice"
 
 // Update the ProjectMetadata interface to include thumbnail
 export interface ProjectMetadata {
@@ -44,6 +47,7 @@ interface NewProjectDialogProps {
 
 export function NewProjectDialog({ buttonVariant = "default", onProjectCreated, children }: NewProjectDialogProps) {
   const router = useRouter()
+  const dispatch = useAppDispatch()
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<"upload" | "metadata">("upload")
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
@@ -58,6 +62,9 @@ export function NewProjectDialog({ buttonVariant = "default", onProjectCreated, 
   const [showSuccess, setShowSuccess] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [isPrivate, setIsPrivate] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadSpeed, setUploadSpeed] = useState(0)
+
 
 
   // Reset state when dialog opens/closes
@@ -128,28 +135,63 @@ export function NewProjectDialog({ buttonVariant = "default", onProjectCreated, 
       
       if (result.success && uploadedFile)
       {
-        await fetch(result.data.uploadUrl,{
-          method:"PUT",
-          body:uploadedFile,
-          headers: {
-            "Content-Type": uploadedFile.type,
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open("PUT", result.data.uploadUrl, true);
+            xhr.setRequestHeader("Content-Type", uploadedFile.type )
+            let startTime = Date.now();
+            xhr.upload.onprogress = (event) => {
+              if (event.lengthComputable)
+              {
+                const percentComplete = (event.loaded / event.total) * 100;
+                const currentTime = Date.now()
+                const timeElapsedInSeconds = (currentTime - startTime) / 1000;
+                const speedInBytesPerSec = event.loaded/timeElapsedInSeconds;
+                const speedReadable =
+                speedInBytesPerSec > 1024 * 1024
+                  ? `${(speedInBytesPerSec / (1024 * 1024)).toFixed(2)} MB/s`
+                  : `${(speedInBytesPerSec / 1024).toFixed(2)} KB/s`;
+        
+              console.log(`Progress: ${percentComplete.toFixed(2)}%`);
+              console.log(`Speed: ${speedReadable}`);
+                   // OPTIONAL: hook these into React state
+            setUploadProgress(percentComplete);
+            setUploadSpeed(speedReadable);
+        
+
+              }
+            }
+            xhr.onload = () =>{
+              if (xhr.status >= 200 && xhr.status < 300)
+              {
+                console.log("Upload Complete");
+                resolve();
+              }
+              else{
+                reject(new Error (`Upload failed with status ${xhr.status}`))
+              }
+            };
+            xhr.onerror = () =>{
+              reject(new Error ("Network error during upload"))
+            }
+            xhr.send(uploadedFile)
+          });
           }
-        })
         
         console.log("File uploaded successfully to S3")
 
-        await fetch("http://localhost:4300/api/notification/videoupload", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            event: "VIDEO_UPLOAD_INITIATED",
-            filename: uploadedFile?.name.split(".")[0] || "untitled",
-            filetype: uploadedFile.type,
-          }),
-        });
-      }
+        // await fetch("http://localhost:4300/api/notification/videoupload", {
+        //   method: "POST",
+        //   headers: {
+        //     "Content-Type": "application/json",
+        //   },
+        //   body: JSON.stringify({
+        //     event: "VIDEO_UPLOAD_INITIATED",
+        //     filename: uploadedFile?.name.split(".")[0] || "untitled",
+        //     filetype: uploadedFile.type,
+        //   }),
+        // });
+      
       
       // Simulate project creation
       console.log(response)
@@ -188,7 +230,8 @@ export function NewProjectDialog({ buttonVariant = "default", onProjectCreated, 
   
       // Navigate to the new project page
       // router.push("/repo/1")
-      router.push(`/repo/${result.data.repo.id}`)
+      dispatch(fetchRepositories())
+      router.push("/")
       
     } catch (error) {
       console.error("Error creating project:", error)
@@ -532,6 +575,7 @@ export function NewProjectDialog({ buttonVariant = "default", onProjectCreated, 
                   ) : (
                     <CreateProjectButton
                       onClick={handleCreateProject}
+                      progress={uploadProgress}
                       disabled={!canProceed() || isCreating}
                       isCreating={isCreating}
                     />

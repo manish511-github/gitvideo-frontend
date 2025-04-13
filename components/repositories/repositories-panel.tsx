@@ -22,6 +22,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react"
+import { RepositoryStatus} from "@/components/repositories/repository-status"
 import { NewProjectDialog } from "@/components/new-project/new-project-dialog"
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
 import { fetchRepositories } from "@/lib/redux/repositoriesSlice"
@@ -80,14 +81,14 @@ export function RepositoriesPanel({ onRepoSelect }: RepositoriesPanelProps) {
 
   // Fetch repositories on component mount
   useEffect(() => {
-    if (status === "idle") {
+    // if (status === "idle") {
       dispatch(fetchRepositories())
-    }
-  }, [dispatch, status])
+    
+  }, [dispatch])
 
   // Filter repositories based on status and search term
   const filteredRepositories = repositories
-    .filter((repo) => !filterActive || repo.status === "Created") // "Created" is equivalent to "Active" in the API
+    .filter((repo) => !filterActive || repo.status === "Created" ||repo.status === "Added") // "Created" is equivalent to "Active" in the API
     .filter(
       (repo) =>
         searchTerm === "" ||
@@ -103,6 +104,7 @@ export function RepositoriesPanel({ onRepoSelect }: RepositoriesPanelProps) {
       branches: repo.branches.length,
       thumbnail: repo.thumbnail || "/placeholder.svg?height=120&width=200",
       status: repo.status === "Created" ? "Active" : repo.status,
+      processingProgress:0,
       creationDate: formatCreationDate(repo.createdAt),
       storage: calculateStorage(repo.videos),
     }))
@@ -279,12 +281,20 @@ export function RepositoriesPanel({ onRepoSelect }: RepositoriesPanelProps) {
                           className="object-cover w-full h-full transition-transform group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                        <Badge
+                        {repo.status === "Active" ? (
+                          <Badge
                           variant={repo.status === "Active" ? "default" : "secondary"}
-                          className="absolute top-2 right-2 text-[9px] px-1.5 py-0"
+                          className="text-[9px] px-2 py-0.5 font-medium"
                         >
                           {repo.status}
                         </Badge>
+                    ) : (
+                      <RepositoryStatus repoId = {repo.id}
+                        videoId={repo.name} 
+                        status={repo.status} 
+                        progress={repo.processingProgress} 
+                      />
+                    )}  
                       </div>
                       <div className="p-2.5 flex flex-col flex-1 w-full">
                         <div>
@@ -350,12 +360,20 @@ export function RepositoriesPanel({ onRepoSelect }: RepositoriesPanelProps) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
                             <h3 className="font-semibold text-xs leading-tight text-foreground">{repo.name}</h3>
-                            <Badge
-                              variant={repo.status === "Active" ? "default" : "secondary"}
-                              className="text-[8px] px-1.5 py-0"
-                            >
-                              {repo.status}
-                            </Badge>
+                            {repo.status === "Active" ? (
+                          <Badge
+                          variant={repo.status === "Active" ? "default" : "secondary"}
+                          className="text-[9px] px-2 py-0.5 font-medium"
+                        >
+                          {repo.status}
+                        </Badge>
+                    ) : (
+                      <RepositoryStatus repoId = {repo.id}
+                        videoId={repo.name} 
+                        status={repo.status} 
+                        progress={repo.processingProgress} 
+                      />
+                    )}  
                           </div>
                           <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-1">{repo.description}</p>
                           <div className="flex items-center justify-between mt-1">
@@ -398,13 +416,20 @@ export function RepositoriesPanel({ onRepoSelect }: RepositoriesPanelProps) {
                           </div>
                         </div>
                         <div className="flex items-center pl-2">
+                        {repo.status === "Active" ? (
                           <Badge
-                            variant={repo.status === "Active" ? "default" : "secondary"}
-                            className="text-[9px] px-2 py-0.5 font-medium"
-                          >
-                            {repo.status}
-                          </Badge>
-                        </div>
+                          variant={repo.status === "Active" ? "default" : "secondary"}
+                          className="text-[9px] px-2 py-0.5 font-medium"
+                        >
+                          {repo.status}
+                        </Badge>
+                    ) : (
+                      <RepositoryStatus repoId = {repo.id}
+                        videoId={repo.name} 
+                        status={repo.status} 
+                        progress={repo.processingProgress} 
+                      />
+                    )}                        </div>
                         <div className="flex items-center text-[10px] font-medium text-foreground/80 pl-2">
                           {repo.lastUpdated}
                         </div>

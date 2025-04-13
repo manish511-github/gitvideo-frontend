@@ -83,6 +83,14 @@ const repositoriesSlice = createSlice({
         setSelectedBranch: (state, action: PayloadAction<string>) => {
             state.selectedBranch = action.payload
           },
+        updateRepositoryStatus: (state, action:PayloadAction<{repoId: Number; status: string}>) =>{
+          const repo = state.items.find((r)=> r.id == action.payload.repoId)
+          if (repo){
+            debugger
+            repo.status =action.payload.status
+          }
+
+        }
     },
     extraReducers : (builder) => {
         builder
@@ -102,5 +110,5 @@ const repositoriesSlice = createSlice({
 
 })
 
-export const { setSelectedRepository, setSelectedBranch } = repositoriesSlice.actions
+export const { setSelectedRepository, setSelectedBranch,updateRepositoryStatus } = repositoriesSlice.actions
 export default repositoriesSlice.reducer

@@ -4,138 +4,146 @@ import type React from "react"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { FileVideo, Upload, X, Film } from "lucide-react"
+import { FileVideo, Upload, X } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
+import { VideoPreview } from "./video-preview"
 
-// Update the props interface
 interface FileUploadAreaProps {
   onFileUpload: (file: File | null) => void
   file: File | null
 }
 
-// Update the component implementation
 export function FileUploadArea({ onFileUpload, file }: FileUploadAreaProps) {
   const [isDragging, setIsDragging] = useState(false)
 
-  const handleDragOver = (e: React.DragEvent) => {
+  // Handle drag events for the upload area
+  const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(true)
   }
 
-  const handleDragLeave = () => {
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
     setIsDragging(false)
   }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
-
-    const droppedFile = Array.from(e.dataTransfer.files).find((file) => file.type.startsWith("video/"))
-    onFileUpload(droppedFile || null)
-  }
-
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const videoFile = Array.from(e.target.files).find((file) => file.type.startsWith("video/"))
-      onFileUpload(videoFile || null)
+    const droppedFile = e.dataTransfer.files[0]
+    if (droppedFile && droppedFile.type.startsWith("video/")) {
+      onFileUpload(droppedFile)
     }
-  }
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024 * 1024) {
-      return `${(bytes / 1024).toFixed(1)} KB`
-    }
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
   }
 
   return (
-    <div className="space-y-6">
-      <div
-        className={`border-2 border-dashed rounded-lg transition-all ${
-          isDragging
-            ? "border-primary bg-primary/10 scale-[1.01]"
-            : "border-zinc-700 hover:border-primary/50 hover:bg-zinc-900/50"
-        }`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <div className="flex flex-col items-center justify-center py-10 px-4">
+    <>
+      {!file ? (
+        <div
+          className={`relative transition-all duration-300 ${isDragging ? "scale-[1.01]" : ""}`}
+          onDragOver={(e) => e.preventDefault()}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Animated gradient border */}
           <div
-            className={`rounded-full p-4 mb-4 transition-all ${isDragging ? "bg-primary/20 scale-110" : "bg-zinc-900"}`}
+            className={`absolute inset-0 rounded-xl p-[1px] overflow-hidden ${
+              isDragging ? "opacity-100" : "opacity-0"
+            } transition-opacity duration-300`}
           >
-            {isDragging ? (
-              <Film className="h-10 w-10 text-primary animate-pulse" />
-            ) : (
-              <Upload className="h-10 w-10 text-primary/80" />
-            )}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 animate-gradient-x"></div>
           </div>
 
-          <h3 className="text-lg font-medium mb-2 text-white/90">
-            {isDragging ? "Drop your video here" : "Drag & drop your video"}
-          </h3>
+          {/* Theme-aware border styling in the drag area */}
+          <div
+            className={`border border-dashed rounded-lg transition-all cursor-pointer py-10 relative z-10
+              ${
+                isDragging
+                  ? "border-blue-400/70 bg-blue-500/5"
+                  : "border-border hover:border-blue-500/20 hover:bg-blue-500/5"
+              }`}
+            onClick={() => document.getElementById("file-upload")?.click()}
+          >
+            <div className="flex flex-col items-center justify-center text-center p-4">
+              <motion.div
+                className={`rounded-full p-4 mb-3 ${isDragging ? "bg-blue-500/30" : "bg-blue-500/10"}`}
+                animate={{
+                  scale: isDragging ? 1.1 : 1,
+                  boxShadow: isDragging ? "0 0 25px rgba(59, 130, 246, 0.5)" : "0 0 0 rgba(59, 130, 246, 0)",
+                }}
+              >
+                <Upload className={`h-8 w-8 ${isDragging ? "text-blue-400" : "text-blue-500/80"}`} />
+              </motion.div>
 
-          <p className="text-xs text-muted-foreground text-center max-w-md mb-4">
-            Upload a single video file to create your project. We support MP4, MOV, AVI, and WebM formats.
-          </p>
+              <h3 className="text-base font-medium mb-2 text-foreground">
+                {isDragging ? "Drop to upload" : "Drag & drop your video"}
+              </h3>
 
-          <div className="flex gap-3">
-            <input id="file-upload" type="file" accept="video/*" className="hidden" onChange={handleFileInputChange} />
+              <p className="text-sm text-muted-foreground max-w-md mb-4">
+                Upload a video file to create your project. We support MP4, MOV, and WebM formats.
+              </p>
 
-            <Button
-              onClick={() => document.getElementById("file-upload")?.click()}
-              variant="outline"
-              className="border-zinc-700 hover:bg-zinc-900 text-xs"
-            >
-              Select File
-            </Button>
+              <input
+                id="file-upload"
+                type="file"
+                accept="video/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null
+                  onFileUpload(file)
+                }}
+              />
+
+              {/* Theme-aware button */}
+              <Button
+                variant="outline"
+                className="border-border text-foreground hover:bg-muted relative overflow-hidden group"
+              >
+                <span className="relative z-10">Select Video</span>
+                <span className="absolute inset-0 w-0 bg-muted group-hover:w-full transition-all duration-300"></span>
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-
-      {file && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-medium text-white/90">Uploaded File</h3>
+      ) : (
+        <div className="p-4">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-base font-medium text-foreground flex items-center">
+              <FileVideo className="h-4 w-4 mr-2 text-blue-400" />
+              Video Preview
+            </h3>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-xs text-muted-foreground hover:text-white"
+              className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 px-2 group"
               onClick={() => onFileUpload(null)}
             >
+              <X className="h-3 w-3 mr-1.5 group-hover:rotate-90 transition-transform duration-200" />
               Remove
             </Button>
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="flex items-center justify-between p-3 rounded-md bg-zinc-900/70 border border-zinc-800"
-          >
-            <div className="flex items-center space-x-3 overflow-hidden">
-              <div className="flex-shrink-0 w-8 h-8 rounded bg-primary/20 flex items-center justify-center">
-                <FileVideo className="h-4 w-4 text-primary" />
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-xs truncate max-w-[300px] text-white/90">{file.name}</p>
-                <p className="text-[10px] text-muted-foreground">{formatFileSize(file.size)}</p>
+          <div className="h-[350px] rounded-lg overflow-hidden border border-border shadow-xl flex items-center justify-center bg-black">
+            <VideoPreview file={file} />
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 text-foreground">
+              <div className="flex items-center gap-1.5">
+                <FileVideo className="h-3.5 w-3.5 text-blue-400" />
+                <span className="truncate max-w-[300px] font-medium">{file.name}</span>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-full hover:bg-zinc-800"
-              onClick={() => onFileUpload(null)}
-            >
-              <X className="h-3.5 w-3.5" />
-              <span className="sr-only">Remove file</span>
-            </Button>
-          </motion.div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">
+                {(file.size / (1024 * 1024)).toFixed(2)} MB
+              </Badge>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
-
