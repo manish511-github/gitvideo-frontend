@@ -65,6 +65,7 @@ export function NewProjectDialog({ buttonVariant = "default", onProjectCreated, 
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadSpeed, setUploadSpeed] = useState(0)
 
+  const controller = new AbortController()
 
 
   // Reset state when dialog opens/closes
@@ -179,18 +180,18 @@ export function NewProjectDialog({ buttonVariant = "default", onProjectCreated, 
           }
         
         console.log("File uploaded successfully to S3")
-
-        // await fetch("http://localhost:4300/api/notification/videoupload", {
-        //   method: "POST",
-        //   headers: {
-        //     "Content-Type": "application/json",
-        //   },
-        //   body: JSON.stringify({
-        //     event: "VIDEO_UPLOAD_INITIATED",
-        //     filename: uploadedFile?.name.split(".")[0] || "untitled",
-        //     filetype: uploadedFile.type,
-        //   }),
-        // });
+        await fetch("http://localhost:4300/api/notification/videoupload", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            event: "VIDEO_UPLOAD_INITIATED",
+            repo: result.data.repo,
+            filename: uploadedFile?.name.split(".")[0] || "untitled",
+            filetype: uploadedFile?.type,
+          }),
+        });
       
       
       // Simulate project creation

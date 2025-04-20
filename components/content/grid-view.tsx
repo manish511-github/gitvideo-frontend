@@ -27,17 +27,19 @@ export function GridView({ filteredCommits, selectedCommit, handleAssetSelect, e
           >
             {/* Thumbnail section */}
             <div className="relative aspect-video bg-muted/30">
-              {/* <img
-                src={commit.videoAsset.thumbnail || "/placeholder.svg?height=180&width=320"}
-                alt={commit.videoAsset.name}
+              <img
+                // src={commit.thumbnail || "/placeholder.svg?height=180&width=320"}
+                src={"/placeholder.svg?height=180&width=320"}
+
+                alt={commit.description}
                 className="w-full h-full object-cover"
-              /> */}
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
               {/* Duration badge */}
-              {/* <div className="absolute bottom-2 right-2 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded">
-                {commit.videoAsset.duration}
-              </div> */}
+              <div className="absolute bottom-2 right-2 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded">
+                {commit.duration}
+              </div>
 
               {/* Edit button (appears on hover) */}
               <Button
@@ -58,7 +60,7 @@ export function GridView({ filteredCommits, selectedCommit, handleAssetSelect, e
             <div className="p-2.5">
               {/* Title and branch badge */}
               <div className="flex items-start justify-between gap-2 mb-1.5">
-                {/* <h3 className="font-medium text-xs line-clamp-1">{commit.videoAsset.name}</h3> */}
+                <h3 className="font-medium text-xs line-clamp-1">{commit.description}</h3>
                 <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">
                   {commit.branch}
                 </Badge>

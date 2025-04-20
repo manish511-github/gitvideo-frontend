@@ -144,7 +144,7 @@ export function VideoEditorModal({ commit, onClose, isOpen }: VideoEditorModalPr
                       <div className="flex items-start gap-4">
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={commit.avatar} alt={commit.author} />
-                          <AvatarFallback>{commit.author[0]}</AvatarFallback>
+                          {/* <AvatarFallback>{commit.author[0]}</AvatarFallback> */}
                         </Avatar>
                         <div>
                           <h3 className="font-medium">{commit.message}</h3>

@@ -31,6 +31,8 @@ export interface Commit {
     commitId: string
     description: string
     changes: any
+    duration: any
+    playlistUrl : string
     branchId: number
     videoId: number
     parentCommitId: number | null
@@ -86,7 +88,6 @@ const repositoriesSlice = createSlice({
         updateRepositoryStatus: (state, action:PayloadAction<{repoId: Number; status: string}>) =>{
           const repo = state.items.find((r)=> r.id == action.payload.repoId)
           if (repo){
-            debugger
             repo.status =action.payload.status
           }
 

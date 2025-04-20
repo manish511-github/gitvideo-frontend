@@ -17,6 +17,8 @@ export interface Commit {
   id: string
   description: string
   message: string
+  duration: any
+  playlistUrl: string
   author: string
   date: string
   avatar: string

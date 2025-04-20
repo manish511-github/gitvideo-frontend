@@ -1,14 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EnhancedVideoPlayer } from "@/components/enhanced-video-player"
 import type { Branch, Commit } from "@/types/repo-types"
+import { fetchCommitMetadata } from "@/lib/redux/commitMetadataSlice"
+
 import {
   FileVideo,
   Edit2,
@@ -34,13 +37,19 @@ import { cn } from "@/lib/utils"
 
 interface InfoPanelProps {
   selectedBranchObj: Branch | undefined
-  selectedCommit: Commit | null
+  selectedCommit: any | null
   showPreview: boolean
   enterEditMode: (commit: Commit) => void
 }
 
 export function InfoPanel({ selectedBranchObj, selectedCommit, showPreview, enterEditMode }: InfoPanelProps) {
   const [activeTab, setActiveTab] = useState<string>("technical")
+  const dispatch = useAppDispatch()
+
+  // const [commitMetadata, setcommitMetadata] = useState<any>(null)
+
+  const commitMetadata = useAppSelector((state: any) =>  state.commitMetadata )
+
 
   // Get change type color
   const getChangeTypeColor = (type: string) => {
@@ -72,6 +81,15 @@ export function InfoPanel({ selectedBranchObj, selectedCommit, showPreview, ente
     }
   }
 
+  useEffect(() => {
+    if (!selectedCommit) return
+
+    
+    dispatch(fetchCommitMetadata({ commitId: selectedCommit.commitId }))
+
+
+  }, [selectedCommit, dispatch])
+
   return (
     <ResizablePanelGroup direction="vertical" className="h-full">
       {/* Video preview panel */}
@@ -82,10 +100,12 @@ export function InfoPanel({ selectedBranchObj, selectedCommit, showPreview, ente
             VIDEO PREVIEW
           </h3>
           {selectedCommit && showPreview ? (
+            
             <div className="flex-grow flex items-center justify-center bg-muted dark:bg-black rounded-md overflow-hidden shadow-md border border-border dark:border-zinc-800">
               <div className="w-full h-full relative">
                 <EnhancedVideoPlayer
-                  title={selectedCommit.message}
+                  videoUrl={selectedCommit.playlistUrl}
+                  title={selectedCommit.description}
                   author={selectedCommit.author}
                   authorAvatar={selectedCommit.avatar}
                 />
@@ -172,7 +192,7 @@ export function InfoPanel({ selectedBranchObj, selectedCommit, showPreview, ente
                       </div>
                     </div>
 
-                    <Separator className="w-full my-2 bg-border dark:bg-zinc-800" />
+      <Separator className="w-full my-2 bg-border dark:bg-zinc-800" />
 
                     {/* Video specs */}
                     <div className="space-y-1.5 w-full">
@@ -338,7 +358,7 @@ export function InfoPanel({ selectedBranchObj, selectedCommit, showPreview, ente
                         COMMIT CHANGES
                       </h3>
                       <div className="space-y-1.5">
-                        {selectedCommit.changes.map((change, index) => (
+                        {/* {selectedCommit.changes.map((change, index) => (
                           <div
                             key={index}
                             className="flex items-center gap-2 bg-muted dark:bg-zinc-900 rounded-md p-1.5 shadow-sm border border-border dark:border-zinc-800"
@@ -353,7 +373,7 @@ export function InfoPanel({ selectedBranchObj, selectedCommit, showPreview, ente
                               </span>
                             </div>
                           </div>
-                        ))}
+                        ))} */}
                       </div>
                     </div>
                   </div>

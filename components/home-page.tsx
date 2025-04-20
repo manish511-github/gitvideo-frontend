@@ -267,6 +267,7 @@ console.log(branches)
                   <InfoPanel
                     selectedBranchObj={selectedBranchObj}
                     selectedCommit={selectedCommit}
+                    
                     showPreview={showPreview}
                     enterEditMode={enterEditMode}
                   />

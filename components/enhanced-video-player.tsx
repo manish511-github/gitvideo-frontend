@@ -46,7 +46,7 @@ export function EnhancedVideoPlayer({
   videoUrl,
   posterUrl,
   forceShowVideo = true,
-  title = "Product Demo Scene",
+  title,
   author = "Sarah Chen",
   authorAvatar = "/placeholder.svg?height=32&width=32",
   useHls = true, // Default to using HLS
@@ -87,8 +87,11 @@ export function EnhancedVideoPlayer({
       hlsInstance.destroy()
       setHlsInstance(null)
     }
+    const frontUrl = "http://localhost:4566/video-processed/";
+    // const fullVideoUrl = videoUrl ? `${frontUrl}${videoUrl}` : null;
 
-    const videoSrc = useHls ? TEST_HLS_URL : videoUrl || "/placeholder.mp4"
+    // const videoSrc = useHls ? TEST_HLS_URL : videoUrl || "/placeholder.mp4"
+    const videoSrc = videoUrl ? `${frontUrl}${videoUrl}` : null;
 
     // Check if HLS is needed and supported
     if (useHls && Hls.isSupported()) {
@@ -98,7 +101,11 @@ export function EnhancedVideoPlayer({
         backBufferLength: 90,
       })
 
-      hls.loadSource(videoSrc)
+      if (videoSrc) {
+        hls.loadSource(videoSrc)
+      } else {
+        console.error("Video source is null or undefined.")
+      }
       hls.attachMedia(videoRef.current)
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -131,7 +138,9 @@ export function EnhancedVideoPlayer({
     }
     // For Safari which has native HLS support or when not using HLS
     else if (videoRef.current) {
-      videoRef.current.src = videoSrc
+      if (videoSrc) {
+        videoRef.current.src = videoSrc
+      }
     }
 
     return () => {
