@@ -32,8 +32,39 @@ import {
   Upload,
   Replace,
   AlertCircle,
+  Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+// Utility functions for formatting metadata
+const formatDuration = (seconds: number | undefined): string => {
+  if (!seconds) return "00:00"
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+}
+
+const formatFileSize = (bytes: number | undefined): string => {
+  if (!bytes) return "0 B"
+  const sizes = ["B", "KB", "MB", "GB", "TB"]
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
+}
+
+const formatFrameTypes = (frameTypes: any): string => {
+  if (!frameTypes) return "N/A"
+  return `I:${frameTypes.I || 0}, P:${frameTypes.P || 0}, B:${frameTypes.B || 0}`
+}
+
+const formatProcessingTime = (timestamp: string | undefined): string => {
+  if (!timestamp) return "N/A"
+  try {
+    const date = new Date(timestamp)
+    return date.toLocaleString()
+  } catch (e) {
+    return timestamp
+  }
+}
 
 interface InfoPanelProps {
   selectedBranchObj: Branch | undefined
@@ -46,10 +77,11 @@ export function InfoPanel({ selectedBranchObj, selectedCommit, showPreview, ente
   const [activeTab, setActiveTab] = useState<string>("technical")
   const dispatch = useAppDispatch()
 
-  // const [commitMetadata, setcommitMetadata] = useState<any>(null)
-
-  const commitMetadata = useAppSelector((state: any) =>  state.commitMetadata )
-
+  // Get metadata from Redux store with debugging
+  const { data, loading, error } = useAppSelector((state: any) => {
+    console.log("Current commitMetadata state:", state.commitMetadata)
+    return state.commitMetadata
+  })
 
   // Get change type color
   const getChangeTypeColor = (type: string) => {
@@ -84,10 +116,8 @@ export function InfoPanel({ selectedBranchObj, selectedCommit, showPreview, ente
   useEffect(() => {
     if (!selectedCommit) return
 
-    
+    console.log("Fetching metadata for commit:", selectedCommit.commitId)
     dispatch(fetchCommitMetadata({ commitId: selectedCommit.commitId }))
-
-
   }, [selectedCommit, dispatch])
 
   return (
@@ -100,7 +130,6 @@ export function InfoPanel({ selectedBranchObj, selectedCommit, showPreview, ente
             VIDEO PREVIEW
           </h3>
           {selectedCommit && showPreview ? (
-            
             <div className="flex-grow flex items-center justify-center bg-muted dark:bg-black rounded-md overflow-hidden shadow-md border border-border dark:border-zinc-800">
               <div className="w-full h-full relative">
                 <EnhancedVideoPlayer
@@ -163,6 +192,13 @@ export function InfoPanel({ selectedBranchObj, selectedCommit, showPreview, ente
                   <User className="h-3.5 w-3.5" />
                   User
                 </TabsTrigger>
+                <TabsTrigger
+                  value="debug"
+                  className="text-[11px] h-9 px-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none flex items-center gap-1.5"
+                >
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  Debug
+                </TabsTrigger>
               </TabsList>
             </div>
           </div>
@@ -175,78 +211,208 @@ export function InfoPanel({ selectedBranchObj, selectedCommit, showPreview, ente
             >
               {selectedCommit ? (
                 <ScrollArea className="h-full w-full">
-                  <div className="p-3 space-y-3 w-full">
-                    {/* Technical Overview */}
-                    <div className="space-y-1.5 w-full">
-                      <h3 className="text-[10px] uppercase font-medium text-muted-foreground dark:text-white/70 flex items-center gap-1.5">
-                        <Info className="h-3.5 w-3.5" />
-                        TECHNICAL OVERVIEW
-                      </h3>
-                      <div className="grid grid-cols-2 gap-1.5 w-full">
-                        <TechSpec label="HEVC" value="H.265" />
-                        <TechSpec label="Resolution" value="3840 × 2160" />
-                        <TechSpec label="Bitrate" value="29.98 Mbps" />
-                        <TechSpec label="Format" value="MOV (H.265)" />
-                        <TechSpec label="Duration" value="00:31" />
-                        <TechSpec label="File Size" value="118 MB" />
+                  {loading ? (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground">Loading metadata...</p>
                       </div>
                     </div>
-
-      <Separator className="w-full my-2 bg-border dark:bg-zinc-800" />
-
-                    {/* Video specs */}
-                    <div className="space-y-1.5 w-full">
-                      <h3 className="text-[10px] uppercase font-medium text-muted-foreground dark:text-white/70 flex items-center gap-1.5">
-                        <Film className="h-3.5 w-3.5" />
-                        VIDEO
-                      </h3>
-                      <div className="grid grid-cols-2 gap-1.5 w-full">
-                        <TechSpec label="Frame Rate" value="23.98 fps" />
-                        <TechSpec label="Color Depth" value="10-bit" />
-                        <TechSpec label="Color Space" value="BT.709" />
-                        <TechSpec label="File Size" value="118 MB" />
+                  ) : error ? (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center p-4">
+                        <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                        <p className="text-sm font-medium text-red-500">Error loading metadata</p>
+                        <p className="text-xs text-muted-foreground mt-1">{error}</p>
                       </div>
                     </div>
-
-                    <Separator className="w-full my-2 bg-border dark:bg-zinc-800" />
-
-                    {/* Audio specs */}
-                    <div className="space-y-1.5 w-full">
-                      <h3 className="text-[10px] uppercase font-medium text-muted-foreground dark:text-white/70 flex items-center gap-1.5">
-                        <Volume2 className="h-3.5 w-3.5" /> {/* Changed from AudioWaveform to Volume2 */}
-                        AUDIO
-                      </h3>
-                      <div className="grid grid-cols-2 gap-1.5 w-full">
-                        <TechSpec label="Codec" value="AAC-LC" />
-                        <TechSpec label="Sample Rate" value="48 kHz" />
-                        <TechSpec label="Channels" value="Stereo" />
-                        <TechSpec label="Bit Rate" value="256 kbps" />
-                      </div>
-                    </div>
-
-                    <Separator className="w-full my-2 bg-border dark:bg-zinc-800" />
-
-                    {/* Encoding info */}
-                    <div className="space-y-1.5 w-full">
-                      <h3 className="text-[10px] uppercase font-medium text-muted-foreground dark:text-white/70 flex items-center gap-1.5">
-                        <Cpu className="h-3.5 w-3.5" />
-                        ENCODING INFORMATION
-                      </h3>
-                      <div className="grid grid-cols-2 gap-1.5 w-full">
-                        <div className="bg-muted dark:bg-zinc-900 rounded-md p-1.5 w-full shadow-sm border border-border dark:border-zinc-800">
-                          <div className="text-[10px] text-muted-foreground dark:text-white/60 mb-0.5">
-                            Hardware Acceleration
-                          </div>
-                          <Badge variant="outline" className="text-[9px] h-4 px-1 border-zinc-700">
-                            enabled
-                          </Badge>
+                  ) : (
+                    <div className="p-3 space-y-3 w-full">
+                      {/* Technical Overview */}
+                      <div className="space-y-1.5 w-full">
+                        <h3 className="text-[10px] uppercase font-medium text-muted-foreground dark:text-white/70 flex items-center gap-1.5">
+                          <Info className="h-3.5 w-3.5" />
+                          TECHNICAL OVERVIEW
+                        </h3>
+                        <div className="grid grid-cols-2 gap-1.5 w-full">
+                          {data?.technical?.video_streams?.[0] ? (
+                            <>
+                              <TechSpec
+                                label="Codec"
+                                value={data.technical.video_streams[0].codec_long_name || "H.264"}
+                              />
+                              <TechSpec
+                                label="Resolution"
+                                value={`${data.technical.video_streams[0].width} × ${data.technical.video_streams[0].height}`}
+                              />
+                              <TechSpec
+                                label="Bitrate"
+                                value={`${Math.round(data.technical.video_streams[0].bit_rate / 1000)} kbps`}
+                              />
+                              <TechSpec
+                                label="Format"
+                                value={data.technical.general.format_long_name || "MOV (H.264)"}
+                              />
+                              <TechSpec label="Duration" value={formatDuration(data.technical.general.duration)} />
+                              <TechSpec label="File Size" value={formatFileSize(data.technical.general.size)} />
+                            </>
+                          ) : (
+                            <>
+                              <TechSpec label="Codec" value="Not available" />
+                              <TechSpec label="Resolution" value="Not available" />
+                              <TechSpec label="Bitrate" value="Not available" />
+                              <TechSpec label="Format" value="Not available" />
+                              <TechSpec label="Duration" value="Not available" />
+                              <TechSpec label="File Size" value="Not available" />
+                            </>
+                          )}
                         </div>
-                        <TechSpec label="Encoder" value="VideoToolbox / Apple M1" />
-                        <TechSpec label="Profile" value="Main 10" />
-                        <TechSpec label="Level" value="5.1" />
                       </div>
+
+                      <Separator className="w-full my-2 bg-border dark:bg-zinc-800" />
+
+                      {/* Video specs */}
+                      <div className="space-y-1.5 w-full">
+                        <h3 className="text-[10px] uppercase font-medium text-muted-foreground dark:text-white/70 flex items-center gap-1.5">
+                          <Film className="h-3.5 w-3.5" />
+                          VIDEO
+                        </h3>
+                        <div className="grid grid-cols-2 gap-1.5 w-full">
+                          {data?.technical?.video_streams?.[0] ? (
+                            <>
+                              <TechSpec
+                                label="Frame Rate"
+                                value={`${data.technical.video_streams[0].frame_rate} fps`}
+                              />
+                              <TechSpec
+                                label="Pixel Format"
+                                value={data.technical.video_streams[0].pix_fmt || "yuv420p"}
+                              />
+                              <TechSpec label="Profile" value={data.technical.video_streams[0].profile || "High"} />
+                              <TechSpec
+                                label="Aspect Ratio"
+                                value={data.technical.video_streams[0].display_aspect_ratio || "16:9"}
+                              />
+                              <TechSpec
+                                label="Field Order"
+                                value={data.technical.video_streams[0].field_order || "Progressive"}
+                              />
+                              <TechSpec label="Total Frames" value={data.analysis?.total_frames?.toString() || "N/A"} />
+                            </>
+                          ) : (
+                            <>
+                              <TechSpec label="Frame Rate" value="Not available" />
+                              <TechSpec label="Pixel Format" value="Not available" />
+                              <TechSpec label="Profile" value="Not available" />
+                              <TechSpec label="Aspect Ratio" value="Not available" />
+                              <TechSpec label="Field Order" value="Not available" />
+                              <TechSpec label="Total Frames" value="Not available" />
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <Separator className="w-full my-2 bg-border dark:bg-zinc-800" />
+
+                      {/* Audio specs */}
+                      <div className="space-y-1.5 w-full">
+                        <h3 className="text-[10px] uppercase font-medium text-muted-foreground dark:text-white/70 flex items-center gap-1.5">
+                          <Volume2 className="h-3.5 w-3.5" />
+                          AUDIO
+                        </h3>
+                        <div className="grid grid-cols-2 gap-1.5 w-full">
+                          {data?.technical?.audio_streams?.[0] ? (
+                            <>
+                              <TechSpec
+                                label="Codec"
+                                value={data.technical.audio_streams[0].codec_long_name || "AAC-LC"}
+                              />
+                              <TechSpec
+                                label="Sample Rate"
+                                value={`${data.technical.audio_streams[0].sample_rate} Hz`}
+                              />
+                              <TechSpec
+                                label="Channels"
+                                value={data.technical.audio_streams[0].channel_layout || "Stereo"}
+                              />
+                              <TechSpec
+                                label="Bit Rate"
+                                value={`${Math.round(data.technical.audio_streams[0].bit_rate / 1000)} kbps`}
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <TechSpec label="Codec" value="Not available" />
+                              <TechSpec label="Sample Rate" value="Not available" />
+                              <TechSpec label="Channels" value="Not available" />
+                              <TechSpec label="Bit Rate" value="Not available" />
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <Separator className="w-full my-2 bg-border dark:bg-zinc-800" />
+
+                      {/* Encoding info */}
+                      <div className="space-y-1.5 w-full">
+                        <h3 className="text-[10px] uppercase font-medium text-muted-foreground dark:text-white/70 flex items-center gap-1.5">
+                          <Cpu className="h-3.5 w-3.5" />
+                          ENCODING INFORMATION
+                        </h3>
+                        <div className="grid grid-cols-2 gap-1.5 w-full">
+                          <div className="bg-muted dark:bg-zinc-900 rounded-md p-1.5 w-full shadow-sm border border-border dark:border-zinc-800">
+                            <div className="text-[10px] text-muted-foreground dark:text-white/60 mb-0.5">
+                              Hardware Acceleration
+                            </div>
+                            <Badge variant="outline" className="text-[9px] h-4 px-1 border-zinc-700">
+                              {data?.system?.hardware_acceleration?.length > 0 ? "enabled" : "disabled"}
+                            </Badge>
+                          </div>
+                          <TechSpec label="Encoder" value={data?.technical?.general?.tags?.encoder || "Unknown"} />
+                          {data?.technical?.video_streams?.[0] ? (
+                            <>
+                              <TechSpec label="Profile" value={data.technical.video_streams[0].profile || "Main 10"} />
+                              <TechSpec label="Frame Types" value={formatFrameTypes(data.analysis?.frame_types)} />
+                            </>
+                          ) : (
+                            <>
+                              <TechSpec label="Profile" value="Not available" />
+                              <TechSpec label="Frame Types" value="Not available" />
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {data?.analysis && (
+                        <>
+                          <Separator className="w-full my-2 bg-border dark:bg-zinc-800" />
+
+                          {/* Analysis info */}
+                          <div className="space-y-1.5 w-full">
+                            <h3 className="text-[10px] uppercase font-medium text-muted-foreground dark:text-white/70 flex items-center gap-1.5">
+                              <Cpu className="h-3.5 w-3.5" />
+                              ANALYSIS
+                            </h3>
+                            <div className="grid grid-cols-2 gap-1.5 w-full">
+                              <TechSpec
+                                label="Keyframe Count"
+                                value={data.analysis.keyframe_count?.toString() || "N/A"}
+                              />
+                              <TechSpec
+                                label="Keyframe Interval"
+                                value={data.analysis.keyframe_interval?.toString() || "N/A"}
+                              />
+                              <TechSpec label="Motion Analysis" value={data.analysis.motion_analysis || "N/A"} />
+                              <TechSpec
+                                label="Processing Time"
+                                value={formatProcessingTime(data.system?.processing_time)}
+                              />
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
-                  </div>
+                  )}
                 </ScrollArea>
               ) : (
                 <div className="h-full flex items-center justify-center bg-background dark:bg-black">
@@ -409,6 +575,7 @@ export function InfoPanel({ selectedBranchObj, selectedCommit, showPreview, ente
                         </div>
                         <TechSpec label="Date Uploaded" value="03/30/2025" />
                         <TechSpec label="Release Date" value="04/15/2025" />
+                        <div className="bg-muted dark:bg-zinc-900 rounded-md p-1.5 border border-border dark:border-zinc-800" />
                         <div className="bg-muted dark:bg-zinc-900 rounded-md p-1.5 border border-border dark:border-zinc-800">
                           <div className="text-[10px] text-muted-foreground dark:text-white/60 mb-0.5">
                             Release Platform
@@ -579,6 +746,58 @@ export function InfoPanel({ selectedBranchObj, selectedCommit, showPreview, ente
                 </div>
               )}
             </TabsContent>
+
+            {/* Debug tab */}
+            <TabsContent
+              value="debug"
+              className="h-full m-0 data-[state=active]:flex-1 data-[state=active]:overflow-hidden"
+            >
+              <ScrollArea className="h-full">
+                <div className="p-3 space-y-3">
+                  <h3 className="text-[10px] uppercase font-medium text-muted-foreground dark:text-white/70 flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    DEBUG INFORMATION
+                  </h3>
+
+                  <div className="space-y-2">
+                    <div className="bg-muted dark:bg-zinc-900 rounded-md p-2 shadow-sm border border-border dark:border-zinc-800">
+                      <div className="text-[10px] text-muted-foreground dark:text-white/60 mb-0.5">API Status</div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-2 h-2 rounded-full ${loading ? "bg-amber-500" : error ? "bg-red-500" : "bg-green-500"}`}
+                        ></div>
+                        <span className="text-[11px] font-medium">
+                          {loading ? "Loading..." : error ? "Error" : data ? "Data Loaded" : "No Data"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-muted dark:bg-zinc-900 rounded-md p-2 shadow-sm border border-border dark:border-zinc-800">
+                      <div className="text-[10px] text-muted-foreground dark:text-white/60 mb-0.5">
+                        Selected Commit ID
+                      </div>
+                      <div className="text-[11px] font-mono bg-black/20 p-1 rounded overflow-x-auto">
+                        {selectedCommit?.commitId || "None"}
+                      </div>
+                    </div>
+
+                    {error && (
+                      <div className="bg-red-500/10 rounded-md p-2 shadow-sm border border-red-500/30">
+                        <div className="text-[10px] text-red-500 font-medium mb-0.5">Error Message</div>
+                        <div className="text-[11px] text-red-500/80">{error}</div>
+                      </div>
+                    )}
+
+                    <div className="bg-muted dark:bg-zinc-900 rounded-md p-2 shadow-sm border border-border dark:border-zinc-800">
+                      <div className="text-[10px] text-muted-foreground dark:text-white/60 mb-0.5">Raw Metadata</div>
+                      <div className="text-[10px] font-mono bg-black/20 p-1 rounded overflow-x-auto max-h-[300px] overflow-y-auto">
+                        <pre>{JSON.stringify(data, null, 2) || "No data available"}</pre>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ScrollArea>
+            </TabsContent>
           </div>
         </Tabs>
       </ResizablePanel>
@@ -595,4 +814,3 @@ function TechSpec({ label, value }: { label: string; value: string }) {
     </div>
   )
 }
-
