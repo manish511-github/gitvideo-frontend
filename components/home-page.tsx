@@ -101,8 +101,10 @@ console.log(branches)
   }
 
   const enterEditMode = (commit: Commit) => {
-    setSelectedCommit(commit)
-    setIsEditMode(true)
+    // Instead of opening the modal, navigate to the video editor page
+    const videoSrc = commit.videoAsset?.url || "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+    const videoId = commit.id
+    router.push(`/video-editor?videoSrc=${encodeURIComponent(videoSrc)}&videoId=${videoId}`)
   }
 
   const exitEditMode = () => {

@@ -83,11 +83,11 @@ export function ListView({
 
                 <div className="flex-1 min-w-0 flex items-center gap-2">
                   <div className="relative w-10 h-7 overflow-hidden rounded flex-shrink-0">
-                    <img
+                    {/* <img
                       src={commit.videoAsset.thumbnail || "/placeholder.svg"}
                       alt={commit.videoAsset.name}
                       className="object-cover w-full h-full"
-                    />
+                    /> */}
                   </div>
                   <div className="min-w-0 overflow-hidden">
                     <div className="font-medium text-[10px] truncate">{commit.videoAsset.name}</div>

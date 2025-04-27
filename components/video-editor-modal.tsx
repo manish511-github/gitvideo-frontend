@@ -163,7 +163,7 @@ export function VideoEditorModal({ commit, onClose, isOpen }: VideoEditorModalPr
                       <div className="space-y-2">
                         <h4 className="text-sm font-medium">Changes</h4>
                         <div className="space-y-2">
-                          {commit.changes.map((change, index) => (
+                          {/* {commit.changes.map((change, index) => (
                             <div key={index} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
                               <span>{getChangeIcon(change.type)}</span>
                               <div>
@@ -171,7 +171,7 @@ export function VideoEditorModal({ commit, onClose, isOpen }: VideoEditorModalPr
                                 <span className="text-xs text-muted-foreground ml-2">at {change.timestamp}</span>
                               </div>
                             </div>
-                          ))}
+                          ))} */}
                         </div>
                       </div>
                     </CardContent>
